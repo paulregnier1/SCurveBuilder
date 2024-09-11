@@ -23,7 +23,7 @@ y_values = sigmoid_curve(loss_ratio, shape, inversion_point, max_cap)
 
 # Manual point input in sidebar
 st.sidebar.subheader("Add Custom Points")
-num_points = st.sidebar.number_input("Number of custom points", min_value=1, max_value=10, value=5)
+num_points = st.sidebar.number_input("Number of custom points", min_value=1, max_value=10, value=1)
 
 manual_loss_ratios = []
 manual_capacities = []
