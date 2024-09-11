@@ -22,8 +22,8 @@ y_values = sigmoid_curve(loss_ratio, shape, inversion_point, max_cap)
 
 # Get user input for manual points
 st.subheader("Add Custom Points")
-manual_loss_ratios = st.text_input("Enter loss ratios (comma separated)", value="0.6, 1.0, 1.2")
-manual_capacities = st.text_input("Enter capacities (comma separated)", value="10, 30, 35")
+manual_loss_ratios = st.text_input("Enter loss ratios (comma separated)", value="0.5,0.8,0.85,0.9,1,1.2,1.25")
+manual_capacities = st.text_input("Enter capacities (comma separated)", value="40,32,28,15,8,6,4")
 
 # Convert the inputs into lists of floats
 try:
