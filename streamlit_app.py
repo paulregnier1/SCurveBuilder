@@ -21,15 +21,15 @@ def sigmoid_curve(x, shape, inversion_point, max_cap):
 
 y_values = sigmoid_curve(loss_ratio, shape, inversion_point, max_cap)
 
-# Manual point input
-st.subheader("Add Custom Points")
-num_points = st.number_input("Number of custom points", min_value=1, max_value=10, value=5)
+# Manual point input in sidebar
+st.sidebar.subheader("Add Custom Points")
+num_points = st.sidebar.number_input("Number of custom points", min_value=1, max_value=10, value=5)
 
 manual_loss_ratios = []
 manual_capacities = []
 
 for i in range(num_points):
-    col1, col2 = st.columns(2)
+    col1, col2 = st.sidebar.columns(2)
     with col1:
         loss_ratio = st.number_input(f"Loss Ratio {i+1}", min_value=0.4, max_value=1.4, value=0.8, step=0.01, key=f"loss_ratio_{i}")
     with col2:
@@ -38,12 +38,16 @@ for i in range(num_points):
     manual_capacities.append(capacity)
 
 # Fit the S-curve to the manual points
-popt, _ = curve_fit(sigmoid_curve, manual_loss_ratios, manual_capacities, 
-                    p0=[shape, inversion_point, max_cap], 
-                    bounds=([1, 0.5, 0], [70, 1.2, np.inf]))
-
-fitted_shape, fitted_inversion, fitted_max_cap = popt
-fitted_y_values = sigmoid_curve(loss_ratio, *popt)
+try:
+    popt, _ = curve_fit(sigmoid_curve, manual_loss_ratios, manual_capacities, 
+                        p0=[shape, inversion_point, max_cap], 
+                        bounds=([1, 0.5, 0], [70, 1.2, np.inf]))
+    fitted_shape, fitted_inversion, fitted_max_cap = popt
+    fitted_y_values = sigmoid_curve(loss_ratio, *popt)
+    fit_success = True
+except:
+    st.warning("Unable to fit curve to the provided points. Try adjusting your points or parameters.")
+    fit_success = False
 
 # Toggle button for fitted curve
 show_fitted_curve = st.sidebar.checkbox("Show fitted S-curve", value=True)
@@ -55,8 +59,8 @@ ax.plot(loss_ratio, y_values, label="Original S-Curve")
 # Plot manual points in red
 ax.scatter(manual_loss_ratios, manual_capacities, color='red', label="Manual Points")
 
-# Plot fitted curve if toggle is on
-if show_fitted_curve:
+# Plot fitted curve if toggle is on and fit was successful
+if show_fitted_curve and fit_success:
     ax.plot(loss_ratio, fitted_y_values, '--', color='green', label="Fitted S-Curve")
 
 # Reverse the x-axis and show x-axis as percentages
@@ -73,7 +77,7 @@ ax.legend()
 st.pyplot(fig)
 
 # Display fitted parameters
-if show_fitted_curve:
+if show_fitted_curve and fit_success:
     st.sidebar.subheader("Fitted S-Curve Parameters")
     st.sidebar.write(f"Shape: {fitted_shape:.2f}")
     st.sidebar.write(f"Inversion Point: {fitted_inversion:.2f}")
