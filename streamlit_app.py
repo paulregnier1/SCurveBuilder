@@ -45,7 +45,7 @@ else:
     fitted_y_values = sigmoid_curve(loss_ratio, *popt)
 
     # Toggle button for fitted curve
-    show_fitted_curve = st.checkbox("Show fitted S-curve", value=True)
+    show_fitted_curve = st.checkbox("Show fitted S-curve", value=False)
 
     # Plotting the curve
     fig, ax = plt.subplots()
@@ -77,5 +77,3 @@ else:
         st.write(f"Shape: {fitted_shape:.2f}")
         st.write(f"Inversion Point: {fitted_inversion:.2f}")
         st.write(f"Max Capacity: {fitted_max_cap:.2f}")
-    # Display the plot
-    st.pyplot(fig)
