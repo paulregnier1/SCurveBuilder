@@ -6,10 +6,11 @@ from scipy.optimize import curve_fit
 # Title of the web app
 st.title("S-Curve Builder")
 
-# Input parameters
-shape = st.slider("Shape parameter", min_value=1, max_value=70, value=30)
-max_cap = st.number_input("Max Capacity (in M)", value=40)
-inversion_point = st.slider("Inflection Point", min_value=0.5, max_value=1.2, value=0.95)
+# Sidebar for input parameters
+st.sidebar.header("S-Curve Parameters")
+shape = st.sidebar.slider("Shape parameter", min_value=1, max_value=70, value=30)
+max_cap = st.sidebar.number_input("Max Capacity (in M)", value=40)
+inversion_point = st.sidebar.slider("Inflection Point", min_value=0.5, max_value=1.2, value=0.95)
 
 # Loss Ratios 
 loss_ratio = np.arange(0.4, 1.4, 0.01)
@@ -45,7 +46,7 @@ fitted_shape, fitted_inversion, fitted_max_cap = popt
 fitted_y_values = sigmoid_curve(loss_ratio, *popt)
 
 # Toggle button for fitted curve
-show_fitted_curve = st.checkbox("Show fitted S-curve", value=True)
+show_fitted_curve = st.sidebar.checkbox("Show fitted S-curve", value=True)
 
 # Plotting the curve
 fig, ax = plt.subplots()
@@ -73,7 +74,7 @@ st.pyplot(fig)
 
 # Display fitted parameters
 if show_fitted_curve:
-    st.subheader("Fitted S-Curve Parameters")
-    st.write(f"Shape: {fitted_shape:.2f}")
-    st.write(f"Inversion Point: {fitted_inversion:.2f}")
-    st.write(f"Max Capacity: {fitted_max_cap:.2f}")
+    st.sidebar.subheader("Fitted S-Curve Parameters")
+    st.sidebar.write(f"Shape: {fitted_shape:.2f}")
+    st.sidebar.write(f"Inversion Point: {fitted_inversion:.2f}")
+    st.sidebar.write(f"Max Capacity: {fitted_max_cap:.2f}")
