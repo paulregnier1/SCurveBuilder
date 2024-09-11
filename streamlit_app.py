@@ -31,11 +31,11 @@ manual_capacities = []
 for i in range(num_points):
     col1, col2 = st.sidebar.columns(2)
     with col1:
-        loss_ratio = st.number_input(f"Loss Ratio {i+1}", min_value=0.4, max_value=1.4, value=0.8, step=0.01, key=f"loss_ratio_{i}")
+        loss_ratio_point = col1.number_input(f"Loss Ratio {i+1}", min_value=0.4, max_value=1.4, value=0.8, step=0.01, key=f"loss_ratio_{i}")
     with col2:
-        capacity = st.number_input(f"Capacity {i+1}", min_value=0.0, max_value=float(max_cap), value=20.0, step=0.1, key=f"capacity_{i}")
-    manual_loss_ratios.append(loss_ratio)
-    manual_capacities.append(capacity)
+        capacity_point = col2.number_input(f"Capacity {i+1}", min_value=0.0, max_value=float(max_cap), value=20.0, step=0.1, key=f"capacity_{i}")
+    manual_loss_ratios.append(loss_ratio_point)
+    manual_capacities.append(capacity_point)
 
 # Fit the S-curve to the manual points
 try:
