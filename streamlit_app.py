@@ -2,15 +2,51 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
+import plotly.graph_objects as go
+import pandas as pd
+import io
+import base64
+
+st.set_page_config(layout="wide")
+
+# Custom CSS
+st.markdown("""
+<style>
+.stApp {
+    background-color: #f0f2f6;
+}
+.stSidebar {
+    background-color: #e0e2e6;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # Title of the web app
 st.title("S-Curve Builder")
 
 # Sidebar for input parameters
 st.sidebar.header("S-Curve Parameters")
-shape = st.sidebar.slider("Shape parameter", min_value=1, max_value=70, value=30)
-max_cap = st.sidebar.number_input("Max Capacity (in M)", value=40)
-inversion_point = st.sidebar.slider("Inflection Point", min_value=0.5, max_value=1.2, value=0.95)
+
+with st.sidebar.form("parameters_form"):
+    shape = st.slider("Shape parameter", min_value=1, max_value=70, value=30)
+    max_cap = st.number_input("Max Capacity (in M)", value=40)
+    inversion_point = st.slider("Inflection Point", min_value=0.5, max_value=1.2, value=0.95)
+    
+    num_points = st.number_input("Number of custom points", min_value=1, max_value=10, value=5)
+    
+    manual_loss_ratios = []
+    manual_capacities = []
+    
+    for i in range(num_points):
+        col1, col2 = st.columns(2)
+        with col1:
+            loss_ratio_point = st.number_input(f"Loss Ratio {i+1}", min_value=0.4, max_value=1.4, value=0.8, step=0.01, key=f"loss_ratio_{i}")
+        with col2:
+            capacity_point = st.number_input(f"Capacity {i+1}", min_value=0.0, max_value=float(max_cap), value=20.0, step=0.1, key=f"capacity_{i}")
+        manual_loss_ratios.append(loss_ratio_point)
+        manual_capacities.append(capacity_point)
+    
+    update_button = st.form_submit_button("Update Plot")
 
 # Loss Ratios 
 loss_ratio = np.arange(0.4, 1.4, 0.01)
@@ -21,64 +57,75 @@ def sigmoid_curve(x, shape, inversion_point, max_cap):
 
 y_values = sigmoid_curve(loss_ratio, shape, inversion_point, max_cap)
 
-# Manual point input in sidebar
-st.sidebar.subheader("Add Custom Points")
-num_points = st.sidebar.number_input("Number of custom points", min_value=1, max_value=10, value=1)
-
-manual_loss_ratios = []
-manual_capacities = []
-
-for i in range(num_points):
-    col1, col2 = st.sidebar.columns(2)
-    with col1:
-        loss_ratio_point = col1.number_input(f"Loss Ratio {i+1}", min_value=0.4, max_value=1.4, value=0.8, step=0.01, key=f"loss_ratio_{i}")
-    with col2:
-        capacity_point = col2.number_input(f"Capacity {i+1}", min_value=0.0, max_value=float(max_cap), value=20.0, step=0.1, key=f"capacity_{i}")
-    manual_loss_ratios.append(loss_ratio_point)
-    manual_capacities.append(capacity_point)
-
 # Fit the S-curve to the manual points
 try:
-    popt, _ = curve_fit(sigmoid_curve, manual_loss_ratios, manual_capacities, 
-                        p0=[shape, inversion_point, max_cap], 
-                        bounds=([1, 0.5, 0], [70, 1.2, np.inf]))
+    popt, pcov = curve_fit(sigmoid_curve, manual_loss_ratios, manual_capacities, 
+                           p0=[shape, inversion_point, max_cap], 
+                           bounds=([1, 0.5, 0], [70, 1.2, np.inf]))
     fitted_shape, fitted_inversion, fitted_max_cap = popt
     fitted_y_values = sigmoid_curve(loss_ratio, *popt)
     fit_success = True
+    
+    # Calculate error metrics
+    residuals = np.array(manual_capacities) - sigmoid_curve(np.array(manual_loss_ratios), *popt)
+    ss_res = np.sum(residuals**2)
+    ss_tot = np.sum((np.array(manual_capacities) - np.mean(manual_capacities))**2)
+    r_squared = 1 - (ss_res / ss_tot)
+    rmse = np.sqrt(np.mean(residuals**2))
+    
 except:
     st.warning("Unable to fit curve to the provided points. Try adjusting your points or parameters.")
     fit_success = False
 
-# Toggle button for fitted curve
-show_fitted_curve = st.sidebar.checkbox("Show fitted S-curve", value=True)
+# Create Plotly figure
+fig = go.Figure()
 
-# Plotting the curve
-fig, ax = plt.subplots()
-ax.plot(loss_ratio, y_values, label="Original S-Curve")
+# Add original S-curve
+fig.add_trace(go.Scatter(x=loss_ratio, y=y_values, mode='lines', name='Original S-Curve'))
 
-# Plot manual points in red
-ax.scatter(manual_loss_ratios, manual_capacities, color='red', label="Manual Points")
+# Add manual points
+fig.add_trace(go.Scatter(x=manual_loss_ratios, y=manual_capacities, mode='markers', name='Manual Points', marker=dict(color='red', size=10)))
 
-# Plot fitted curve if toggle is on and fit was successful
-if show_fitted_curve and fit_success:
-    ax.plot(loss_ratio, fitted_y_values, '--', color='green', label="Fitted S-Curve")
+# Add fitted curve if successful
+if fit_success:
+    fig.add_trace(go.Scatter(x=loss_ratio, y=fitted_y_values, mode='lines', name='Fitted S-Curve', line=dict(dash='dash', color='green')))
 
-# Reverse the x-axis and show x-axis as percentages
-ax.invert_xaxis()
-ax.set_xticks(np.arange(0.5, 1.6, 0.1))
-ax.set_xticklabels([f'{int(x*100)}%' for x in np.arange(0.5, 1.6, 0.1)])
-
-ax.set_xlabel('Loss Ratio (%)')
-ax.set_ylabel('Capacity')
-ax.set_title('S-Curve with Manual Points and Fitted Curve')
-ax.legend()
+# Update layout
+fig.update_layout(
+    xaxis_title='Loss Ratio (%)',
+    yaxis_title='Capacity',
+    title='S-Curve with Manual Points and Fitted Curve',
+    xaxis=dict(tickformat=',.0%', autorange="reversed"),
+    hovermode='closest'
+)
 
 # Display the plot
-st.pyplot(fig)
+st.plotly_chart(fig, use_container_width=True)
 
-# Display fitted parameters
-if show_fitted_curve and fit_success:
-    st.sidebar.subheader("Fitted S-Curve Parameters")
-    st.sidebar.write(f"Shape: {fitted_shape:.2f}")
-    st.sidebar.write(f"Inversion Point: {fitted_inversion:.2f}")
-    st.sidebar.write(f"Max Capacity: {fitted_max_cap:.2f}")
+# Display fitted parameters and error metrics
+if fit_success:
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Fitted S-Curve Parameters")
+        st.write(f"Shape: {fitted_shape:.2f}")
+        st.write(f"Inversion Point: {fitted_inversion:.2f}")
+        st.write(f"Max Capacity: {fitted_max_cap:.2f}")
+    with col2:
+        st.subheader("Error Metrics")
+        st.write(f"R-squared: {r_squared:.4f}")
+        st.write(f"RMSE: {rmse:.4f}")
+
+# Download options
+def get_table_download_link(df):
+    csv = df.to_csv(index=False)
+    b64 = base64.b64encode(csv.encode()).decode()
+    href = f'<a href="data:file/csv;base64,{b64}" download="s_curve_data.csv">Download CSV File</a>'
+    return href
+
+if st.button('Prepare Download'):
+    df = pd.DataFrame({
+        'Loss Ratio': loss_ratio,
+        'Original S-Curve': y_values,
+        'Fitted S-Curve': fitted_y_values if fit_success else np.nan
+    })
+    st.markdown(get_table_download_link(df), unsafe_allow_html=True)
